@@ -2,6 +2,8 @@ package log;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
  * Что починить:
@@ -16,15 +18,15 @@ public class LogWindowSource
 {
     private int m_iQueueLength;
     
-    private ArrayList<LogEntry> m_messages;
+    private final ConcurrentLinkedQueue<LogEntry> m_messages;
     private final ArrayList<LogChangeListener> m_listeners;
     private volatile LogChangeListener[] m_activeListeners;
     
     public LogWindowSource(int iQueueLength) 
     {
         m_iQueueLength = iQueueLength;
-        m_messages = new ArrayList<LogEntry>(iQueueLength);
-        m_listeners = new ArrayList<LogChangeListener>();
+        m_messages = new ConcurrentLinkedQueue<>();
+        m_listeners = new ArrayList<>();
     }
     
     public void registerListener(LogChangeListener listener)
@@ -44,11 +46,20 @@ public class LogWindowSource
             m_activeListeners = null;
         }
     }
+
+    private void addMessage(LogEntry entry) {
+        synchronized (m_messages) {
+            if (m_messages.size() == m_iQueueLength) {
+                m_messages.poll();
+            }
+            m_messages.add(entry);
+        }
+    }
     
     public void append(LogLevel logLevel, String strMessage)
     {
         LogEntry entry = new LogEntry(logLevel, strMessage);
-        m_messages.add(entry);
+        addMessage(entry);
         LogChangeListener [] activeListeners = m_activeListeners;
         if (activeListeners == null)
         {
@@ -78,8 +89,13 @@ public class LogWindowSource
         {
             return Collections.emptyList();
         }
-        int indexTo = Math.min(startFrom + count, m_messages.size());
-        return m_messages.subList(startFrom, indexTo);
+        ArrayList<LogEntry> messages = null;
+        int indexTo = -1;
+        synchronized (m_messages) {
+            indexTo = Math.min(startFrom + count, m_messages.size());
+            messages = new ArrayList<>(m_messages);
+        }
+        return messages.subList(startFrom, indexTo);
     }
 
     public Iterable<LogEntry> all()

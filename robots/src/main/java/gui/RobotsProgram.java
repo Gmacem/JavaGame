@@ -2,8 +2,7 @@ package gui;
 
 import java.awt.Frame;
 
-import javax.swing.SwingUtilities;
-import javax.swing.UIManager;
+import javax.swing.*;
 
 public class RobotsProgram
 {

@@ -120,7 +120,20 @@ public class GameVisualizer extends JPanel
             return max;
         return value;
     }
-    
+
+    private static double applyMod(double value, double mod) {
+        if (mod < 1e-9) {
+            return mod;
+        }
+        while (value < 0) {
+            value += mod;
+        }
+        while (value > mod) {
+            value -= mod;
+        }
+        return value;
+    }
+
     private void moveRobot(double velocity, double angularVelocity, double duration)
     {
         velocity = applyLimits(velocity, 0, maxVelocity);
@@ -139,8 +152,14 @@ public class GameVisualizer extends JPanel
         {
             newY = m_robotPositionY + velocity * duration * Math.sin(m_robotDirection);
         }
-        m_robotPositionX = newX;
-        m_robotPositionY = newY;
+
+        while (newX < 0) {
+            newX += getWidth();
+        }
+
+        m_robotPositionX = applyMod(newX, getWidth());
+        m_robotPositionY = applyMod(newY, getHeight());
+
         double newDirection = asNormalizedRadians(m_robotDirection + angularVelocity * duration); 
         m_robotDirection = newDirection;
     }
